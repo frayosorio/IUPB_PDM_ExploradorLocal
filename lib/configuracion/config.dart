@@ -10,4 +10,5 @@ class ConfigMapa {
   ];
 
   static const Color colorOpcion = Color.fromARGB(255, 196, 215, 231);
+  static const Color colorUbicacionActual = Color.fromARGB(255, 46, 123, 185);
 }
