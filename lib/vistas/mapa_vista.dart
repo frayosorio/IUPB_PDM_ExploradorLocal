@@ -1,7 +1,10 @@
 import 'dart:async';
 
 import 'package:explorador_local/configuracion/config.dart';
+import 'package:explorador_local/modelos/Lugar.dart';
+import 'package:explorador_local/servicios/MapaServicio.dart';
 import 'package:explorador_local/vistas/controladores/marcador_controlador.dart';
+import 'package:explorador_local/vistas/descripcion_lugar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -59,7 +62,7 @@ class _MapaVistaState extends State<MapaVista> {
     // 3. Configuración del stream
     LocationSettings locationSettings = const LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 0, // detecta cualquier cambio
+      distanceFilter: 50,
     );
 
     // 4. Escuchar ubicación en tiempo real
@@ -77,10 +80,10 @@ class _MapaVistaState extends State<MapaVista> {
                   nuevaPosicion.latitude,
                   nuevaPosicion.longitude,
                 ),
+                ..._marcadores.where((m) => m != _marcadores.first),
               ];
             });
 
-            // 👉 opcional: mover el mapa automáticamente
             _controladorMapa.move(nuevaPosicion, 14);
           },
         );
@@ -143,6 +146,42 @@ class _MapaVistaState extends State<MapaVista> {
   }
 */
 
+  Future<void> _buscarLugares() async {
+    if (_posicionActual == null) return;
+
+    try {
+      final lugares = await MapaServicio().buscarLugares(
+        posicion: _posicionActual!,
+        categoria: _categoriaSeleccionada,
+      );
+
+      setState(() {
+        _marcadores = [
+          _controladorMarcador.crearMarcadorUsuario(
+            _posicionActual!.latitude,
+            _posicionActual!.longitude,
+          ),
+          ...lugares.map(
+            (lugar) => _controladorMarcador.crearMarcadorLugar(
+              lugar,
+              ConfigMapa.obtenerIcono(_categoriaSeleccionada),
+              _seleccionandoLugar,
+            ),
+          ),
+        ];
+      });
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  void _seleccionandoLugar(Lugar lugar) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => DescripcionLugar(lugar: lugar, iconos: ConfigMapa.iconos),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -170,6 +209,7 @@ class _MapaVistaState extends State<MapaVista> {
             }).toList(),
             onChanged: (opcion) {
               setState(() => _categoriaSeleccionada = opcion!);
+              _buscarLugares();
             },
           ),
         ],
